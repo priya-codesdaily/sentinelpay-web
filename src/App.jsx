@@ -3,7 +3,7 @@ import { useState } from 'react'
 function App() {
   const [amount, setAmount] = useState('')
   const [payee, setPayee] = useState('')
-  const [result, setResult] = useState('')
+  const [result, setResult] = useState(null)
 
   const handleSubmit = async () => {
     const response = await fetch('http://localhost:8081/transaction', {
@@ -11,7 +11,7 @@ function App() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ amount: amount, payee: payee })
     })
-    const data = await response.text()
+    const data = await response.json()
     setResult(data)
   }
 
@@ -32,7 +32,27 @@ function App() {
 
       <button onClick={handleSubmit}>Submit transaction</button>
 
-      <p>{result}</p>
+      {result && (
+        <div style={{ marginTop: '20px', border: '1px solid #ccc', padding: '16px', maxWidth: '400px' }}>
+          <h3>{result.decision}</h3>
+
+          <p>Risk Score: {result.riskScore}/100</p>
+          <div style={{ background: '#eee', height: '10px', width: '100%' }}>
+            <div style={{
+              background: result.riskScore >= 70 ? 'red' : result.riskScore >= 40 ? 'orange' : 'green',
+              height: '10px',
+              width: result.riskScore + '%'
+            }}></div>
+          </div>
+
+          <h4>Reasons:</h4>
+          <ul>
+            {result.reasons.map((reason, index) => (
+              <li key={index}>{reason}</li>
+            ))}
+          </ul>
+        </div>
+      )}
     </div>
   )
 }
