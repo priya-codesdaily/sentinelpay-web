@@ -4,28 +4,39 @@ function App() {
   const [amount, setAmount] = useState('')
   const [payee, setPayee] = useState('')
   const [result, setResult] = useState(null)
-const [attackResults, setAttackResults] = useState([])
+  const [attackResults, setAttackResults] = useState([])
 
-const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms))
+  const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms))
 
-const simulateAttack = async () => {
-  setAttackResults([])
-  for (let i = 1; i <= 7; i++) {
-    const response = await fetch('http://localhost:8081/transaction', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ amount: 500, payee: 'attacker' })
-    })
-    const data = await response.json()
-    setAttackResults((prev) => [...prev, { id: i, ...data }])
-    await sleep(500)
+  const getDeviceFingerprint = () => {
+    const parts = [
+      navigator.userAgent,
+      screen.width + 'x' + screen.height,
+      Intl.DateTimeFormat().resolvedOptions().timeZone,
+      navigator.language
+    ]
+    return parts.join('|')
   }
-}
+
+  const simulateAttack = async () => {
+    setAttackResults([])
+    for (let i = 1; i <= 7; i++) {
+      const response = await fetch('http://localhost:8081/transaction', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ amount: 500, payee: 'attacker', deviceFingerprint: getDeviceFingerprint() })
+      })
+      const data = await response.json()
+      setAttackResults((prev) => [...prev, { id: i, ...data }])
+      await sleep(500)
+    }
+  }
+
   const handleSubmit = async () => {
     const response = await fetch('http://localhost:8081/transaction', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ amount: amount, payee: payee })
+      body: JSON.stringify({ amount: amount, payee: payee, deviceFingerprint: getDeviceFingerprint() })
     })
     const data = await response.json()
     setResult(data)
@@ -48,19 +59,19 @@ const simulateAttack = async () => {
 
       <button onClick={handleSubmit}>Submit transaction</button>
       <button onClick={simulateAttack} style={{ marginLeft: '10px' }}>
-  Simulate Fraud Attack
-</button>
+        Simulate Fraud Attack
+      </button>
 
-{attackResults.length > 0 && (
-  <div style={{ marginTop: '20px' }}>
-    <h4>Attack simulation:</h4>
-    {attackResults.map((r) => (
-      <div key={r.id} style={{ padding: '4px 0' }}>
-        Transaction {r.id}: <strong>{r.decision}</strong> (score {r.riskScore})
-      </div>
-    ))}
-  </div>
-)}
+      {attackResults.length > 0 && (
+        <div style={{ marginTop: '20px' }}>
+          <h4>Attack simulation:</h4>
+          {attackResults.map((r) => (
+            <div key={r.id} style={{ padding: '4px 0' }}>
+              Transaction {r.id}: <strong>{r.decision}</strong> (score {r.riskScore})
+            </div>
+          ))}
+        </div>
+      )}
 
       {result && (
         <div style={{ marginTop: '20px', border: '1px solid #ccc', padding: '16px', maxWidth: '400px' }}>
