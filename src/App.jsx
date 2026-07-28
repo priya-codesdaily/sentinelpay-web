@@ -1,4 +1,12 @@
 import { useState } from 'react'
+const style = document.createElement('style')
+style.textContent = `
+  @keyframes slideIn {
+    from { opacity: 0; transform: translateY(-15px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+`
+document.head.appendChild(style)
 
 function App() {
   const [amount, setAmount] = useState('')
@@ -59,7 +67,7 @@ function App() {
   }
 
   return (
-    <div style={{ padding: '20px', maxWidth: '1100px', margin: '0 auto' }}>
+   <div style={{ padding: '20px', maxWidth: '900px', margin: '0 auto', textAlign: 'center' }}>
       <h1>SentinelPay</h1>
       <p>Real-time payment fraud detection</p>
 
@@ -98,8 +106,15 @@ function App() {
 
         {/* RIGHT: result card */}
         <div style={{ minWidth: '320px' }}>
-          {result && (
-            <div style={{ border: '1px solid #ccc', borderRadius: '8px', padding: '16px', maxWidth: '400px' }}>
+         {result && (
+  <div style={{
+    border: '1px solid #ccc',
+    borderRadius: '8px',
+    padding: '16px',
+    maxWidth: '400px',
+    margin: '20px auto 0',
+    animation: 'slideIn 0.4s ease'
+  }}>
               <h3>{result.decision}</h3>
               <p>Risk Score: {result.riskScore}/100</p>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '8px' }}>
