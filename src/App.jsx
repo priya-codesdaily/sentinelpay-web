@@ -59,67 +59,76 @@ function App() {
   }
 
   return (
-    <div>
+    <div style={{ padding: '20px', maxWidth: '1100px', margin: '0 auto' }}>
       <h1>SentinelPay</h1>
-      <p>New transaction</p>
+      <p>Real-time payment fraud detection</p>
 
-      <div>
-        <label>Amount</label>
-        <input type="number" value={amount} onChange={(e) => setAmount(e.target.value)} />
-      </div>
+      <div style={{ display: 'flex', gap: '30px', flexWrap: 'wrap', alignItems: 'flex-start', marginTop: '20px' }}>
 
-      <div>
-        <label>Payee</label>
-        <input type="text" value={payee} onChange={(e) => setPayee(e.target.value)} />
-      </div>
-
-      <button onClick={handleSubmit}>Submit transaction</button>
-      <button onClick={simulateAttack} style={{ marginLeft: '10px' }}>
-        Simulate Fraud Attack
-      </button>
-      <button onClick={loadHistory} style={{ marginLeft: '10px' }}>
-        Load Transaction History
-      </button>
-
-      {attackResults.length > 0 && (
-        <div style={{ marginTop: '20px' }}>
-          <h4>Attack simulation:</h4>
-          {attackResults.map((r) => (
-            <div key={r.id} style={{ padding: '4px 0' }}>
-              Transaction {r.id}: <strong>{r.decision}</strong> (score {r.riskScore})
-            </div>
-          ))}
-        </div>
-      )}
-
-      {result && (
-        <div style={{ marginTop: '20px', border: '1px solid #ccc', padding: '16px', maxWidth: '400px' }}>
-          <h3>{result.decision}</h3>
-          <p>Risk Score: {result.riskScore}/100</p>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '8px' }}>
-            <span style={{ fontSize: '20px' }}>
-              {result.riskScore <= 20 ? '🟢' : result.riskScore <= 40 ? '🟡' : result.riskScore <= 60 ? '🟠' : '🔴'}
-            </span>
-            <div style={{ background: '#eee', height: '10px', width: '100%', borderRadius: '5px', overflow: 'hidden' }}>
-              <div style={{
-                background: result.riskScore <= 20 ? '#22c55e' : result.riskScore <= 40 ? '#eab308' : result.riskScore <= 60 ? '#f97316' : '#ef4444',
-                height: '10px',
-                width: result.riskScore + '%',
-                transition: 'width 0.4s ease'
-              }}></div>
-            </div>
+        {/* LEFT: form + buttons */}
+        <div style={{ minWidth: '280px' }}>
+          <h3>New transaction</h3>
+          <div style={{ marginBottom: '10px' }}>
+            <label>Amount</label><br />
+            <input type="number" value={amount} onChange={(e) => setAmount(e.target.value)} />
           </div>
-          <h4>Reasons:</h4>
-          <ul>
-            {result.reasons.map((reason, index) => (
-              <li key={index}>{reason}</li>
-            ))}
-          </ul>
-        </div>
-      )}
 
+          <div style={{ marginBottom: '10px' }}>
+            <label>Payee</label><br />
+            <input type="text" value={payee} onChange={(e) => setPayee(e.target.value)} />
+          </div>
+
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '10px' }}>
+            <button onClick={handleSubmit}>Submit transaction</button>
+            <button onClick={simulateAttack}>Simulate Fraud Attack</button>
+            <button onClick={loadHistory}>Load Transaction History</button>
+          </div>
+
+          {attackResults.length > 0 && (
+            <div style={{ marginTop: '20px' }}>
+              <h4>Attack simulation:</h4>
+              {attackResults.map((r) => (
+                <div key={r.id} style={{ padding: '4px 0' }}>
+                  Transaction {r.id}: <strong>{r.decision}</strong> (score {r.riskScore})
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* RIGHT: result card */}
+        <div style={{ minWidth: '320px' }}>
+          {result && (
+            <div style={{ border: '1px solid #ccc', borderRadius: '8px', padding: '16px', maxWidth: '400px' }}>
+              <h3>{result.decision}</h3>
+              <p>Risk Score: {result.riskScore}/100</p>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '8px' }}>
+                <span style={{ fontSize: '20px' }}>
+                  {result.riskScore <= 20 ? '🟢' : result.riskScore <= 40 ? '🟡' : result.riskScore <= 60 ? '🟠' : '🔴'}
+                </span>
+                <div style={{ background: '#eee', height: '10px', width: '100%', borderRadius: '5px', overflow: 'hidden' }}>
+                  <div style={{
+                    background: result.riskScore <= 20 ? '#22c55e' : result.riskScore <= 40 ? '#eab308' : result.riskScore <= 60 ? '#f97316' : '#ef4444',
+                    height: '10px',
+                    width: result.riskScore + '%',
+                    transition: 'width 0.4s ease'
+                  }}></div>
+                </div>
+              </div>
+              <h4>Reasons:</h4>
+              <ul>
+                {result.reasons.map((reason, index) => (
+                  <li key={index}>{reason}</li>
+                ))}
+              </ul>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* BELOW: dashboard + table */}
       {history.length > 0 && (
-        <div style={{ marginTop: '30px' }}>
+        <div style={{ marginTop: '40px' }}>
           <div style={{ display: 'flex', gap: '16px', marginBottom: '20px', flexWrap: 'wrap' }}>
             <div style={{ border: '1px solid #ccc', borderRadius: '8px', padding: '12px 20px' }}>
               <div style={{ fontSize: '24px', fontWeight: 'bold' }}>{getStats().total}</div>
