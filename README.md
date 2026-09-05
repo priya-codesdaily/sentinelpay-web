@@ -1,105 +1,122 @@
-# SentinelPay — Web Dashboard
+# SentinelPay
 
-React front-end for SentinelPay, a real-time payment fraud detection engine. This repo is the interface; the rules engine and API live in the backend repo.
+**A real-time payment risk engine that explains every decision it makes.**
 
-**Demo video:** https://youtu.be/pU54R6ApH4U?si=OI-iv70-if-16u8g
-**Backend:** https://github.com/priya-codesdaily/sentinelpay-backend
-
-> Both repos must be running together. Start the backend first — this app is useless without it.
+[Demo Video](https://youtu.be/pU54R6ApH4U) · [Backend Repo](https://github.com/priya-codesdaily/sentinelpay-backend) · [Frontend Repo](https://github.com/priya-codesdaily/sentinelpay-web)
 
 ---
 
-## What this interface does
+## The Problem
 
-You submit a transaction. The backend scores it against four fraud rules and returns a risk score, a decision, and the specific reasons it fired. This app renders that decision as it happens.
+Most payment demo projects store a transaction and show a success message. The part that actually protects people's money — deciding whether a transaction should be trusted *before* it clears — is usually skipped entirely.
 
-| Screen area | What it shows |
-|---|---|
-| Transaction form | Amount and payee input, sitting side by side with the result so you can see cause and effect without scrolling |
-| Risk meter | The 0–100 score as a colour-graded indicator — green through amber to red |
-| Decision badge | APPROVED · FLAGGED · BLOCKED |
-| Reasons list | Every rule that fired, in plain language, with the points it contributed |
-| Summary cards | Total transactions, approval rate, and decision breakdown |
-| Transaction history | Recent decisions, newest first |
-| Attack simulator | Fires a burst of transactions at one payee so you can watch the velocity rule escalate the score in real time |
-
-The attack simulator is the part worth watching. A single transaction looks innocent; the burst is where the score climbs and the decision flips.
+SentinelPay is built around that harder problem: **evaluate every transaction in real time, score its risk against explainable rules, and justify the decision instead of acting as a black box.**
 
 ---
 
-## Device fingerprinting
+## What It Does
 
-Before each request, the app builds a fingerprint from browser-reported signals — user agent, screen dimensions, timezone, and language — and sends it with the transaction. The backend uses it to decide whether this device has been seen before for that payee.
-
-This is deliberately one honest layer, not a complete solution. Every one of those signals can be spoofed by anyone who wants to.
-
----
-
-## Screenshots
-
-<!-- TODO: add these before sharing the repo widely. A README without screenshots gets closed.
-Save to docs/ and reference them here. -->
+| Capability | Problem it solves | Example |
+|---|---|---|
+| **Explainable risk scoring** | Black-box "blocked" decisions aren't trustworthy or debuggable | A ₹15,000 transaction at 1am returns `Risk: 45, FLAGGED — "High amount (+30)", "Unusual hour (+15)"` |
+| **Live attack simulation** | Fraud usually shows up as a *pattern* over time, not one isolated event | A burst of 7 rapid transactions visibly escalates: `APPROVED → APPROVED → FLAGGED → BLOCKED` in real time |
+| **Device fingerprinting** | A known user suddenly transacting from an unfamiliar device is a real fraud signal | User "anshu" on a new browser adds `+20, "Transaction from unrecognized device"` |
+| **Live dashboard** | Raw transaction rows aren't useful without aggregation | `137 Total · 47 Blocked · 27 Flagged · 46% Approval Rate`, computed live from stored data |
+| **Permanent persistence** | A fraud system that forgets on restart isn't a real system | Transaction history survives server restarts — backed by PostgreSQL, not memory |
 
 ---
 
-## Running locally
+## How the Risk Engine Works
 
-**Prerequisites**
-- Node 18 or newer
-- The SentinelPay backend running on port 8081
+Each transaction is scored against independent rules. Points accumulate; nothing is a single point of failure.
 
-**Setup**
+| Rule | Trigger condition | Points | Rationale |
+|---|---|---|---|
+| High amount | Transaction > ₹10,000 | +30 | Unusually large transactions carry more inherent risk |
+| Unusual hour | Between 11pm and 5am | +15 | Off-hours activity correlates with fraud in real payment data |
+| Velocity | More than 3 transactions from the same source in 60 seconds | Escalating, up to +80 | Penalty scales with pattern severity rather than tripping once at a flat rate |
+| Unrecognized device | Known payee, never-seen device fingerprint | +20 | A sudden device change on an established account is a genuine signal |
+
+**Decision thresholds:** `0–39 → Approved` · `40–69 → Flagged` · `70+ → Blocked`
+
+---
+
+## Architecture
+
+```
+React (Vite)
+     │  POST /transaction { amount, payee, deviceFingerprint }
+     ▼
+Controller  →  Service (rules engine)  →  Repository  →  PostgreSQL
+     ▲                                                        │
+     └────────────── { riskScore, decision, reasons } ◄───────┘
+```
+
+Classic 3-layer separation: the Controller only handles HTTP, the Service holds all fraud logic, the Repository only talks to the database — each layer stays ignorant of the others' internals.
+
+---
+
+## Tech Stack
+
+| Layer | Technology | Why |
+|---|---|---|
+| Backend | Java, Spring Boot | Structured, production-grade conventions used in real fintech backends |
+| Frontend | React (Vite) | Industry-default for dashboard-style interfaces |
+| Database | PostgreSQL | ACID guarantees suit transactional, financial-style data |
+| Build | Maven | Standard Spring Boot dependency/build management |
+
+---
+
+## Running Locally
+
+**Backend**
+```bash
+# create a PostgreSQL database named "sentinelpay"
+cp application.properties.example application.properties
+# fill in your local database credentials
+./mvnw spring-boot:run
+# runs on http://localhost:8081
+```
+
+**Frontend**
 ```bash
 npm install
 npm run dev
-```
-Serves on `http://localhost:5173`.
-
----
-
-## Configuration
-
-The backend URL is currently hardcoded to `http://localhost:8081` directly inside `App.jsx`, rather than read from an environment variable. That's a known simplification, not an oversight — see **Known gaps** below.
-
----
-
-## If the dashboard is empty but the backend works
-
-This is almost always CORS. The front-end runs on `:5173` and the API on `:8081` — different ports are different origins, so the browser blocks the request even though the server is fine. Check the browser console for a blocked-origin error, and confirm the backend's CORS configuration allows `http://localhost:5173`.
-
-Testing the API with `curl` will succeed while the browser fails, which is the clue that it's CORS and not the backend.
-
-If the frontend has silently drifted to a different port (5174, 5175 — Vite does this automatically when 5173 is already in use), that alone will trigger this same error, since the backend only allows the original port. Killing stray Node processes and restarting cleanly on 5173 fixes it.
-
----
-
-## Stack
-
-React with Vite, plain inline styles, Oxlint. No component library or CSS framework — the risk meter, badges, and cards are hand-built.
-
----
-
-## Project layout
-
-Everything currently lives in a single `App.jsx` file — the form, risk meter, decision card, reasons list, dashboard cards, history table, and the device fingerprint logic all sit together in one component. Splitting this into separate components (`RiskMeter`, `TransactionForm`, `HistoryTable`, etc.) is a natural next step, but the priority so far has been getting the feature set working end-to-end before organizing it.
-
-```
-src/
-└── App.jsx    # everything: form, state, API calls, and all rendered UI
+# runs on http://localhost:5173
 ```
 
----
-
-## Known gaps
-
-- No loading or error states on a slow or dead backend — the UI just sits there.
-- No input validation on the client; invalid amounts are rejected by the server, not caught here.
-- The history view isn't paginated, so it will slow down once there are thousands of rows.
-- Backend URL is hardcoded rather than environment-configurable.
-- Not responsive below tablet width.
-- No component split — see **Project layout**.
-- No tests.
+Both must run simultaneously — the frontend is non-functional without the backend.
 
 ---
 
-Built by Anshu Priya. Full design notes, API contract, and the fraud rules themselves are documented in the backend repo.
+## Known Limitations
+
+Being upfront about these because a system that hides its own limitations is less trustworthy than one that names them:
+
+| Limitation | Why it exists | Fix on the roadmap |
+|---|---|---|
+| Velocity tracking is in-memory | Fast for a single-instance demo | Redis, for shared state across instances |
+| No authentication | Out of scope for the current phase | JWT-based auth |
+| Device fingerprint is spoofable | Browser-reported signals only | Additional signals (IP, behavioral patterns) |
+| Rules are hand-tuned, not learned | Deterministic and explainable by design | ML layer *on top of* rules, not replacing them |
+
+---
+
+## Roadmap
+
+| Phase | Addition | Purpose |
+|---|---|---|
+| Next | **Scam-intent detection** | Ask "why are you making this payment?" on risky transactions and check the answer against known scam-language signals (guaranteed returns, urgency, OTP requests) |
+| Next | **Redis-based velocity tracking** | Replace in-memory state with shared, distributed rate limiting |
+| Next | **Fuller decision states** | Expand from Approve/Flag/Block to Approve/Warn/Step-Up/Hold/Block |
+| Later | **Beneficiary verification** | Flag new or high-fan-in beneficiary accounts before payment clears |
+| Later | **Fraud graph (Neo4j)** | Detect mule-account patterns via fan-in/fan-out relationship analysis |
+| Exploratory | **Investigation timeline UI** | Convert a flagged case into a readable step-by-step trail for analysts |
+
+---
+
+## Project Status
+
+Actively in development. Core risk engine, live simulation, device recognition, and persistence are complete and demoed in the video above. See Roadmap for what's being built next.
+
+Built by Anshu Priya.
