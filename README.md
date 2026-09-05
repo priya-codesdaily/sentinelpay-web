@@ -8,8 +8,6 @@
 
 ## The Problem
 
-Most payment demo projects store a transaction and show a success message. The part that actually protects people's money — deciding whether a transaction should be trusted *before* it clears — is usually skipped entirely.
-
 SentinelPay is built around that harder problem: **evaluate every transaction in real time, score its risk against explainable rules, and justify the decision instead of acting as a black box.**
 
 ---
